@@ -58,8 +58,11 @@ def main(config: Config):
     logger.info(f"Using renderer: {renderer_name}")
 
     logger.info("Loading dataset...")
-    dataset = datasets.load_dataset("livebench/coding", "main")
+    dataset = datasets.load_dataset("livebench/coding")
     assert isinstance(dataset, datasets.DatasetDict)
+
+    print(dataset)
+
     train_dataset = dataset["train"]
 
     question_suffix = " Provide a numerical answer without units, written inside \\boxed{}."
