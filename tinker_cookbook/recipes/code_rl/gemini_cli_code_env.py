@@ -171,7 +171,7 @@ class CodeEnv_Gemini(ProblemEnv):
         # gets the code from the model output
         code = extract_code_from_model(content)
 
-        if code is not None and self.code_qual_weight > 0.0:
+        if code is not None:
             try:
                 # grade_code_with_gemini is synchronous; run it in a thread
                 code_qual_score = await asyncio.to_thread(
