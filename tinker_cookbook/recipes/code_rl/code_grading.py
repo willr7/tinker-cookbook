@@ -19,7 +19,7 @@ from tinker_cookbook.recipes.code_rl.lcb_utils import TEST_UTIL, TEST_CODE
 
 # Sandbox configuration
 SANDBOX_URL = os.getenv("SANDBOX_URL", "http://localhost:8080/run_code")
-SANDBOX_MAX_CONCURRENCY = int(os.getenv("SANDBOX_MAX_CONCURRENCY", "4"))
+SANDBOX_MAX_CONCURRENCY = int(os.getenv("SANDBOX_MAX_CONCURRENCY", "8"))
 
 # Sandbox session management
 _SANDBOX_SESSION: aiohttp.ClientSession | None = None

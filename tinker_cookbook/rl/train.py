@@ -1004,22 +1004,36 @@ async def do_sync_training(
                     for i, builder in enumerate(env_group_builders_P)
                 ],
             )
-        trajectory_groups_P = [
-            trajectory_group
-            for trajectory_group in trajectory_groups_P
-            if trajectory_group is not None
-        ]
+            trajectory_groups_P = [
+                trajectory_group
+                for trajectory_group in trajectory_groups_P
+                if trajectory_group is not None
+            ]
 
-        # Train step
-        sampling_client, train_step_metrics = await do_train_step_and_get_sampling_client(
-            cfg,
-            i_batch,
-            training_client,
-            service_client,
-            tokenizer,
-            env_group_builders_P,
-            trajectory_groups_P,
-        )
+            # Train step
+            sampling_client, train_step_metrics = await do_train_step_and_get_sampling_client(
+                cfg,
+                i_batch,
+                training_client,
+                service_client,
+                tokenizer,
+                env_group_builders_P,
+                trajectory_groups_P,
+            )
+
+            # Log summary banner with key metrics
+            logtree.log_summary([
+                {"label": "Pass Rate", "value": train_step_metrics.get("env/all/correct", 0),
+                 "thresholds": (0.7, 0.5)},
+                {"label": "Format Rate", "value": train_step_metrics.get("env/all/format", 0),
+                 "thresholds": (0.9, 0.7)},
+                {"label": "Mean Reward", "value": train_step_metrics.get("env/all/reward/total", 0),
+                 "format": "{:.3f}", "max_value": 1.0},
+                {"label": "All Good", "value": train_step_metrics.get("env/all/by_group/frac_all_good", 0)},
+                {"label": "All Bad", "value": train_step_metrics.get("env/all/by_group/frac_all_bad", 0),
+                 "thresholds": (0.3, 0.5), "invert": True},
+                {"label": "Mixed", "value": train_step_metrics.get("env/all/by_group/frac_mixed", 0)},
+            ])
 
         # Log metrics
         metrics.update(train_step_metrics)

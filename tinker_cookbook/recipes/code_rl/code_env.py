@@ -127,26 +127,26 @@ class CodeEnv(ProblemEnv):
         """Not used - CodeEnv uses async check_sandbox_correctness instead."""
         return False
 
-    async def check_sandbox_correctness(self, sample_str: str) -> bool:
-        """Check if the code passes all test cases using sandbox execution."""
+    async def check_sandbox_correctness(self, sample_str: str) -> tuple[bool, str | None]:
+        """Check if the code passes all test cases using sandbox execution.
+
+        Returns:
+            Tuple of (success, extracted_code) where extracted_code is None if no code block found.
+        """
         code = extract_code_from_model(sample_str)
         if code is None:
             logtree.log_text("No code block detected in response.")
-            return False
+            return False, None
 
         try:
             success, details = await sandbox_check_correctness(
                 self.tests, code, timeout=self.reward_timeout
             )
-            status = "✓" if success else "✗"
-            logtree.log_text(
-                f"Sandbox result {status}: {'All tests passed' if success else 'Failed'}"
-            )
-            return success
+            return success, code
         except Exception as exc:
             logger.warning("Sandbox check failed: %s", exc, exc_info=True)
             logtree.log_text(f"Sandbox check failed: {exc}")
-            return False
+            return False, code
 
     def get_reference_answer(self) -> str:
         return ""
@@ -155,20 +155,33 @@ class CodeEnv(ProblemEnv):
         message, parse_success = self.renderer.parse_response(action)
         content = message["content"]
         format_ok_bool = bool(parse_success) and self.check_format(content)
-        correct_answer_bool = await self.check_sandbox_correctness(content)
+        correct_answer_bool, extracted_code = await self.check_sandbox_correctness(content)
         format_score = float(format_ok_bool)
         correct_score = float(correct_answer_bool)
         total_reward = self.format_coef * (format_score - 1.0) + correct_score
 
-        logtree.log_text(f"Problem: {self.get_question()}")
-        logtree.log_text(f"Response: {content}")
-        if reference := self.get_reference_answer():
-            logtree.log_text(f"Reference Answer: {reference}")
-        logtree.log_text(
-            f"Format Valid: {'✓' if format_ok_bool else '✗'}, "
-            f"Correct: {'✓' if correct_answer_bool else '✗'}, "
-            f"Reward: {total_reward:.2f}"
-        )
+        # Log problem in a collapsible section
+        with logtree.scope_header("Problem"):
+            logtree.details(self.get_question(), summary="View Problem Statement", pre=True)
+
+        # Log model response in a collapsible section
+        with logtree.scope_header("Model Response"):
+            logtree.details(content, summary="View Full Response", pre=True)
+
+        # Log extracted code separately for easy inspection
+        with logtree.scope_header("Submitted Code"):
+            if extracted_code:
+                logtree.details(extracted_code, summary="View Extracted Code", pre=True)
+            else:
+                logtree.log_text("⚠️ No code block could be extracted from the response.")
+
+        # Log results summary
+        with logtree.scope_header("Results"):
+            status_icon = "✅" if correct_answer_bool else "❌"
+            format_icon = "✓" if format_ok_bool else "✗"
+            logtree.log_text(f"Format Valid: {format_icon}")
+            logtree.log_text(f"Correct: {status_icon} {'All tests passed' if correct_answer_bool else 'Tests failed'}")
+            logtree.log_text(f"Reward: {total_reward:.2f}", div_class="reward")
 
         return StepResult(
             reward=total_reward,

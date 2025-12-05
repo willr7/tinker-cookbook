@@ -2,3 +2,11 @@
 
 .gemini/
 gha-creds-*.json
+
+nohup.out
+
+.sync_state
+.python-version
+test2/
+testing/
+wandb/

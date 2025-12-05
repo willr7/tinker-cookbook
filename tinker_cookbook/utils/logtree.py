@@ -153,6 +153,9 @@ class Trace:
                     parts.append(formatter_css)
             parts.append("</style>")
 
+        # Theme toggle JavaScript
+        parts.append(_THEME_TOGGLE_JS)
+
         if extra_head:
             parts.append(extra_head)
 
@@ -161,40 +164,227 @@ class Trace:
 
 # Default CSS styling
 _DEFAULT_CSS = """
+/* === Light Theme (Default) === */
+:root {
+    --lt-bg: #f5f5f5;
+    --lt-text: #333;
+    --lt-card: white;
+    --lt-accent: #2563eb;
+    --lt-border: #e5e7eb;
+    --lt-sub: #666;
+    --lt-mono: "Courier New", monospace;
+    --lt-shadow: rgba(0,0,0,0.1);
+    /* Summary colors */
+    --lt-success: #22c55e;
+    --lt-warning: #f59e0b;
+    --lt-danger: #ef4444;
+    --lt-progress-bg: #e5e7eb;
+    /* Role colors for messages */
+    --lt-user-bg: #e3f2fd;
+    --lt-user-border: #1976d2;
+    --lt-user-text: #1565c0;
+    --lt-assistant-bg: #f3e5f5;
+    --lt-assistant-border: #7b1fa2;
+    --lt-assistant-text: #6a1b9a;
+    --lt-system-bg: #fff3e0;
+    --lt-system-border: #f57c00;
+    --lt-system-text: #e65100;
+    --lt-tool-bg: #e8f5e9;
+    --lt-tool-border: #388e3c;
+    --lt-tool-text: #2e7d32;
+    /* Answer/reward badges */
+    --lt-answer-bg: #dbeafe;
+    --lt-answer-text: #1e40af;
+    --lt-reward-bg: #dcfce7;
+    --lt-reward-text: #166534;
+    /* Exception styling */
+    --lt-exc-bg: #fee;
+    --lt-exc-border: #c00;
+    --lt-exc-text: #c00;
+}
+
+/* === Dark Theme (System Preference) === */
+@media (prefers-color-scheme: dark) {
+    :root:not(.light-mode) {
+        --lt-bg: #1a1a2e;
+        --lt-text: #e5e5e5;
+        --lt-card: #16213e;
+        --lt-accent: #60a5fa;
+        --lt-border: #374151;
+        --lt-sub: #9ca3af;
+        --lt-shadow: rgba(0,0,0,0.3);
+        --lt-progress-bg: #374151;
+        /* Role colors for messages (dark) */
+        --lt-user-bg: #1e3a5f;
+        --lt-user-border: #60a5fa;
+        --lt-user-text: #93c5fd;
+        --lt-assistant-bg: #3b1f4b;
+        --lt-assistant-border: #a855f7;
+        --lt-assistant-text: #c4b5fd;
+        --lt-system-bg: #422006;
+        --lt-system-border: #f59e0b;
+        --lt-system-text: #fcd34d;
+        --lt-tool-bg: #14532d;
+        --lt-tool-border: #22c55e;
+        --lt-tool-text: #86efac;
+        /* Answer/reward badges (dark) */
+        --lt-answer-bg: #1e3a5f;
+        --lt-answer-text: #93c5fd;
+        --lt-reward-bg: #14532d;
+        --lt-reward-text: #86efac;
+        /* Exception styling (dark) */
+        --lt-exc-bg: #3b1515;
+        --lt-exc-border: #ef4444;
+        --lt-exc-text: #fca5a5;
+    }
+}
+
+/* === Dark Theme (Manual Toggle) === */
+:root.dark-mode {
+    --lt-bg: #1a1a2e;
+    --lt-text: #e5e5e5;
+    --lt-card: #16213e;
+    --lt-accent: #60a5fa;
+    --lt-border: #374151;
+    --lt-sub: #9ca3af;
+    --lt-shadow: rgba(0,0,0,0.3);
+    --lt-progress-bg: #374151;
+    /* Role colors for messages (dark) */
+    --lt-user-bg: #1e3a5f;
+    --lt-user-border: #60a5fa;
+    --lt-user-text: #93c5fd;
+    --lt-assistant-bg: #3b1f4b;
+    --lt-assistant-border: #a855f7;
+    --lt-assistant-text: #c4b5fd;
+    --lt-system-bg: #422006;
+    --lt-system-border: #f59e0b;
+    --lt-system-text: #fcd34d;
+    --lt-tool-bg: #14532d;
+    --lt-tool-border: #22c55e;
+    --lt-tool-text: #86efac;
+    /* Answer/reward badges (dark) */
+    --lt-answer-bg: #1e3a5f;
+    --lt-answer-text: #93c5fd;
+    --lt-reward-bg: #14532d;
+    --lt-reward-text: #86efac;
+    /* Exception styling (dark) */
+    --lt-exc-bg: #3b1515;
+    --lt-exc-border: #ef4444;
+    --lt-exc-text: #fca5a5;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     line-height: 1.6;
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
-    background: var(--lt-bg, #f5f5f5);
-    color: var(--lt-text, #333);
+    background: var(--lt-bg);
+    color: var(--lt-text);
 }
 
 .lt-root {
-    background: var(--lt-card, white);
+    background: var(--lt-card);
     padding: 2rem;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px var(--lt-shadow);
+    display: flex;
+    flex-direction: column;
 }
+
+/* Make summary appear at top (after title/subtitle) even if logged later */
+.lt-title { order: 1; }
+.lt-subtitle { order: 2; }
+.lt-summary { order: 3; }
+.lt-section, .lt-details, .lt-p, .lt-table, div:not(.lt-summary):not(.lt-subtitle) { order: 4; }
 
 .lt-title {
     margin: 0 0 0.5rem 0;
-    color: var(--lt-accent, #2563eb);
-    border-bottom: 2px solid var(--lt-border, #e5e7eb);
+    color: var(--lt-accent);
+    border-bottom: 2px solid var(--lt-border);
     padding-bottom: 0.5rem;
 }
 
 .lt-subtitle {
-    color: var(--lt-sub, #666);
+    color: var(--lt-sub);
     font-size: 0.875rem;
     margin-bottom: 2rem;
 }
 
+/* === Theme Toggle Button === */
+.lt-theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: 1px solid var(--lt-border);
+    background: var(--lt-card);
+    color: var(--lt-text);
+    cursor: pointer;
+    font-size: 0.875rem;
+    z-index: 1000;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.lt-theme-toggle:hover {
+    background: var(--lt-bg);
+    border-color: var(--lt-accent);
+}
+
+/* === Summary Banner === */
+.lt-summary {
+    background: var(--lt-card);
+    border: 1px solid var(--lt-border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0 2rem 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.lt-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.lt-summary-label {
+    font-size: 0.75rem;
+    color: var(--lt-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.lt-summary-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--lt-text);
+}
+
+.lt-summary-bar {
+    height: 6px;
+    background: var(--lt-progress-bg);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.lt-summary-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.lt-summary-bar-fill.success { background: var(--lt-success); }
+.lt-summary-bar-fill.warning { background: var(--lt-warning); }
+.lt-summary-bar-fill.danger { background: var(--lt-danger); }
+
 .lt-section {
     margin: 1.5rem 0;
     padding-left: 1rem;
-    border-left: 2px solid var(--lt-border, #e5e7eb);
+    border-left: 2px solid var(--lt-border);
 }
 
 .lt-section-body {
@@ -203,7 +393,7 @@ body {
 
 .lt-section h2, .lt-section h3, .lt-section h4, .lt-section h5, .lt-section h6 {
     margin: 0.5rem 0;
-    color: var(--lt-accent, #2563eb);
+    color: var(--lt-accent);
 }
 
 .lt-p {
@@ -213,7 +403,7 @@ body {
 
 .lt-details {
     margin: 0.5rem 0;
-    border: 1px solid var(--lt-border, #e5e7eb);
+    border: 1px solid var(--lt-border);
     border-radius: 4px;
     padding: 0.5rem;
 }
@@ -227,14 +417,14 @@ body {
 .lt-details-body {
     margin-top: 0.5rem;
     padding: 0.5rem;
-    background: var(--lt-bg, #f5f5f5);
+    background: var(--lt-bg);
     border-radius: 4px;
     overflow-x: auto;
 }
 
 .lt-details-body pre {
     margin: 0;
-    font-family: var(--lt-mono, "Courier New", monospace);
+    font-family: var(--lt-mono);
     font-size: 0.875rem;
     white-space: pre-wrap;
 }
@@ -247,7 +437,7 @@ body {
 }
 
 .lt-table th {
-    background: var(--lt-accent, #2563eb);
+    background: var(--lt-accent);
     color: white;
     padding: 0.5rem;
     text-align: left;
@@ -256,36 +446,36 @@ body {
 
 .lt-table td {
     padding: 0.5rem;
-    border-bottom: 1px solid var(--lt-border, #e5e7eb);
+    border-bottom: 1px solid var(--lt-border);
 }
 
 .lt-table tr:nth-child(even) {
-    background: var(--lt-bg, #f5f5f5);
+    background: var(--lt-bg);
 }
 
 .lt-table-caption {
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--lt-text, #333);
+    color: var(--lt-text);
 }
 
 .lt-exc {
-    background: #fee;
-    border: 2px solid #c00;
+    background: var(--lt-exc-bg);
+    border: 2px solid var(--lt-exc-border);
     border-radius: 4px;
     padding: 1rem;
     margin: 1rem 0;
 }
 
 .lt-exc summary {
-    color: #c00;
+    color: var(--lt-exc-text);
     font-weight: 700;
     cursor: pointer;
 }
 
 .lt-exc pre {
     margin-top: 0.5rem;
-    font-family: var(--lt-mono, "Courier New", monospace);
+    font-family: var(--lt-mono);
     font-size: 0.875rem;
     overflow-x: auto;
 }
@@ -299,14 +489,52 @@ body {
 }
 
 .answer {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--lt-answer-bg);
+    color: var(--lt-answer-text);
 }
 
 .reward {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--lt-reward-bg);
+    color: var(--lt-reward-text);
 }
+"""
+
+# Theme toggle JavaScript
+_THEME_TOGGLE_JS = """
+<script>
+(function() {
+    // Check for saved preference
+    var saved = localStorage.getItem('lt-theme');
+    if (saved === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+    } else if (saved === 'light') {
+        document.documentElement.classList.add('light-mode');
+    }
+
+    // Add toggle button after DOM ready
+    document.addEventListener('DOMContentLoaded', function() {
+        var btn = document.createElement('button');
+        btn.className = 'lt-theme-toggle';
+        btn.textContent = '\\u263C / \\u263E';
+        btn.title = 'Toggle light/dark theme';
+        btn.onclick = function() {
+            var html = document.documentElement;
+            if (html.classList.contains('dark-mode')) {
+                html.classList.remove('dark-mode');
+                html.classList.add('light-mode');
+                localStorage.setItem('lt-theme', 'light');
+            } else if (html.classList.contains('light-mode')) {
+                html.classList.remove('light-mode');
+                localStorage.removeItem('lt-theme');
+            } else {
+                html.classList.add('dark-mode');
+                localStorage.setItem('lt-theme', 'dark');
+            }
+        };
+        document.body.insertBefore(btn, document.body.firstChild);
+    });
+})();
+</script>
 """
 
 
@@ -700,6 +928,93 @@ def log_formatter(formatter: Formatter) -> None:
     # Log the HTML
     html = formatter.to_html()
     log_html(html)
+
+
+def log_summary(
+    metrics: Sequence[Mapping[str, Any]],
+) -> None:
+    """
+    Log a summary banner with key metrics at the top of the page.
+
+    Args:
+        metrics: List of metric dicts, each with:
+            - label: Display name (required)
+            - value: Numeric or string value (required)
+            - format: Format string for display (default "{:.1%}" for 0-1 values, else "{:.2f}")
+            - thresholds: (good, warning) tuple - below warning is danger (optional)
+            - max_value: Max value for progress bar scaling (default 1.0)
+            - invert: If True, higher values are worse (optional, default False)
+
+    Example:
+        logtree.log_summary([
+            {"label": "Pass Rate", "value": 0.85, "thresholds": (0.7, 0.5)},
+            {"label": "Format Rate", "value": 0.95},
+            {"label": "Mean Reward", "value": 0.42, "format": "{:.3f}", "max_value": 1.0},
+        ])
+    """
+    # Graceful degradation: if logging is disabled, do nothing
+    if not _is_logging_enabled():
+        return
+
+    parts = ['<div class="lt-summary">']
+
+    for m in metrics:
+        label = m["label"]
+        value = m["value"]
+        fmt = m.get("format")
+        thresholds = m.get("thresholds")
+        max_value = m.get("max_value", 1.0)
+        invert = m.get("invert", False)
+
+        # Determine format string
+        if fmt is None:
+            if isinstance(value, (int, float)) and 0 <= value <= 1:
+                fmt = "{:.1%}"
+            elif isinstance(value, float):
+                fmt = "{:.2f}"
+            else:
+                fmt = "{}"
+
+        # Format display value
+        if isinstance(value, (int, float)):
+            display_value = fmt.format(value)
+        else:
+            display_value = str(value)
+
+        # Determine color class based on thresholds
+        color_class = "success"
+        if thresholds and isinstance(value, (int, float)):
+            good_thresh, warning_thresh = thresholds
+            check_value = value
+            if invert:
+                # For inverted metrics, swap the logic
+                if check_value > warning_thresh:
+                    color_class = "danger"
+                elif check_value > good_thresh:
+                    color_class = "warning"
+            else:
+                if check_value < warning_thresh:
+                    color_class = "danger"
+                elif check_value < good_thresh:
+                    color_class = "warning"
+
+        parts.append('<div class="lt-summary-item">')
+        parts.append(f'<span class="lt-summary-label">{html_module.escape(label)}</span>')
+        parts.append(f'<span class="lt-summary-value">{html_module.escape(display_value)}</span>')
+
+        # Add progress bar for numeric values
+        if isinstance(value, (int, float)) and max_value > 0:
+            pct = min(100, max(0, (value / max_value) * 100))
+            parts.append('<div class="lt-summary-bar">')
+            parts.append(
+                f'<div class="lt-summary-bar-fill {color_class}" style="width: {pct:.1f}%"></div>'
+            )
+            parts.append("</div>")
+
+        parts.append("</div>")
+
+    parts.append("</div>")
+    log_html("\n".join(parts))
 
 
 def details(text: str, *, summary: str = "Details", pre: bool = True) -> None:

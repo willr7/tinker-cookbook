@@ -15,7 +15,7 @@ class CLIConfig:
     """Command-line configuration for DeepCoder RL training."""
 
     # Model configuration
-    model_name: str = "meta-llama/Llama-3.1-8B-Instruct"
+    model_name: str = "Qwen/Qwen3-4B-Instruct-2507"
     lora_rank: int = 32
     renderer_name: str | None = None
     load_checkpoint_path: str | None = None
@@ -24,26 +24,26 @@ class CLIConfig:
     seed: int = 0
 
     # Training hyperparameters
-    group_size: int = 4
-    groups_per_batch: int = 100
-    learning_rate: float = 1e-5
+    group_size: int = 16
+    groups_per_batch: int = 32
+    learning_rate: float = 4e-5
     max_tokens: int = 24576
     kl_penalty_coef: float = 0.0
     num_substeps: int = 1
 
     # Logging / eval / checkpoints
     log_dir: str | None = None
-    log_path: str | None = None
+    log_path: str | None = "/Users/willreed/projects/schoo/67920/project/final_project/tinker-cookbook/tinker_cookbook/recipes/code_rl/test2/"
     wandb_project: str | None = None
     wandb_name: str | None = None
     compute_post_kl: bool = False
-    eval_every: int = 20
-    save_every: int = 20
+    eval_every: int = 5
+    save_every: int = 5
 
     # Service configuration
     base_url: str | None = None
 
-    behavior_if_log_dir_exists: cli_utils.LogdirBehavior = "ask"
+    behavior_if_log_dir_exists: cli_utils.LogdirBehavior = "resume"
 
     # Async rollout configuration
     max_steps_off_policy: int | None = None

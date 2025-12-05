@@ -215,14 +215,29 @@ class WandbLogger(Logger):
         if not os.environ.get("WANDB_API_KEY"):
             raise ValueError("WANDB_API_KEY environment variable not set")
 
-        # Initialize wandb run
+        # Check for existing run ID to resume
         assert wandb is not None  # For type checker
+        run_id: str | None = None
+        run_id_file: Path | None = None
+        if log_dir:
+            run_id_file = Path(log_dir) / "wandb_run_id.txt"
+            if run_id_file.exists():
+                run_id = run_id_file.read_text().strip()
+                logger.info(f"Resuming wandb run: {run_id}")
+
+        # Initialize wandb run (resume if we have a run ID)
         self.run = wandb.init(
             project=project,
             config=dump_config(config) if config else None,
             dir=str(log_dir) if log_dir else None,
             name=wandb_name,
+            id=run_id,
+            resume="must" if run_id else None,
         )
+
+        # Save run ID for future resumption
+        if run_id_file and self.run:
+            run_id_file.write_text(self.run.id)
 
     def log_hparams(self, config: Any) -> None:
         """Log hyperparameters to wandb."""

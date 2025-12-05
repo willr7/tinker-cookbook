@@ -40,7 +40,7 @@ class ConversationFormatter:
         return CONVERSATION_CSS
 
 
-# CSS for conversation formatting
+# CSS for conversation formatting (uses CSS variables from logtree.py for dark mode support)
 CONVERSATION_CSS = """
 /* Conversation formatting */
 .lt-conversation {
@@ -71,38 +71,38 @@ CONVERSATION_CSS = """
 }
 
 .lt-message-user {
-    background: #e3f2fd;
-    border-left-color: #1976d2;
+    background: var(--lt-user-bg, #e3f2fd);
+    border-left-color: var(--lt-user-border, #1976d2);
 }
 
 .lt-message-user .lt-message-role {
-    color: #1565c0;
+    color: var(--lt-user-text, #1565c0);
 }
 
 .lt-message-assistant {
-    background: #f3e5f5;
-    border-left-color: #7b1fa2;
+    background: var(--lt-assistant-bg, #f3e5f5);
+    border-left-color: var(--lt-assistant-border, #7b1fa2);
 }
 
 .lt-message-assistant .lt-message-role {
-    color: #6a1b9a;
+    color: var(--lt-assistant-text, #6a1b9a);
 }
 
 .lt-message-system {
-    background: #fff3e0;
-    border-left-color: #f57c00;
+    background: var(--lt-system-bg, #fff3e0);
+    border-left-color: var(--lt-system-border, #f57c00);
 }
 
 .lt-message-system .lt-message-role {
-    color: #e65100;
+    color: var(--lt-system-text, #e65100);
 }
 
 .lt-message-tool {
-    background: #e8f5e9;
-    border-left-color: #388e3c;
+    background: var(--lt-tool-bg, #e8f5e9);
+    border-left-color: var(--lt-tool-border, #388e3c);
 }
 
 .lt-message-tool .lt-message-role {
-    color: #2e7d32;
+    color: var(--lt-tool-text, #2e7d32);
 }
 """
