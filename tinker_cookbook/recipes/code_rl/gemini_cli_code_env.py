@@ -108,7 +108,7 @@ def _build_question(example: dict[str, Any]) -> str | None:
     return fetch_live_code_bench_system_prompt(question)
 
 
-class CodeEnv(ProblemEnv):
+class CodeEnv_Gemini(ProblemEnv):
     def __init__(
         self,
         problem: str,
@@ -130,7 +130,7 @@ class CodeEnv(ProblemEnv):
         return extract_code_from_model(sample_str) is not None
 
     def check_answer(self, sample_str: str) -> bool:
-        """Not used - CodeEnv uses async check_sandbox_correctness instead."""
+        """Not used - CodeEnv_Gemini uses async check_sandbox_correctness instead."""
         return False
 
     async def check_sandbox_correctness(self, sample_str: str) -> bool:
@@ -165,6 +165,8 @@ class CodeEnv(ProblemEnv):
         format_score = float(format_ok_bool)
         correct_score = float(correct_answer_bool)
 
+        # IDEA FOR SPEED IMPROVEMENT: Only compute score quality every 10 (or some k) steps
+        # computing the code quality score
         code_qual_score = 0.0
         # gets the code from the model output
         code = extract_code_from_model(content)
@@ -205,8 +207,7 @@ class CodeEnv(ProblemEnv):
             },
         )
 
-
-class DeepcoderDataset(RLDataset):
+class DeepcoderDataset_Gem(RLDataset):
     def __init__(
         self,
         batch_size: int,
@@ -235,7 +236,7 @@ class DeepcoderDataset(RLDataset):
         start = index * self.batch_size
         end = min((index + 1) * self.batch_size, len(self.ds))
         if start >= end:
-            raise IndexError("Incorrect batch index for DeepcoderDataset")
+            raise IndexError("Incorrect batch index for DeepcoderDataset_Gem")
         builders: list[EnvGroupBuilder] = []
         for row in self.ds.select(range(start, end)):
             builder = self._make_env_group_builder(cast(dict[str, Any], row), self.group_size)
@@ -257,7 +258,7 @@ class DeepcoderDataset(RLDataset):
             return None
         return ProblemGroupBuilder(
             env_thunk=partial(
-                CodeEnv,
+                CodeEnv_Gemini,
                 question,
                 tests,
                 self.renderer,
@@ -271,7 +272,7 @@ class DeepcoderDataset(RLDataset):
 
 
 @chz.chz
-class DeepcoderDatasetBuilder(RLDatasetBuilder):
+class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
     batch_size: int
     model_name_for_tokenizer: str
     renderer_name: str
@@ -281,10 +282,10 @@ class DeepcoderDatasetBuilder(RLDatasetBuilder):
     format_coef: float = 0.1
     reward_timeout: int = 6
 
-    async def __call__(self) -> tuple[DeepcoderDataset, DeepcoderDataset]:
+    async def __call__(self) -> tuple[DeepcoderDataset_Gem, DeepcoderDataset_Gem]:
         tokenizer = get_tokenizer(self.model_name_for_tokenizer)
         renderer = renderers.get_renderer(self.renderer_name, tokenizer=tokenizer)
-        train_ds = DeepcoderDataset(
+        train_ds = DeepcoderDataset_Gem(
             batch_size=self.batch_size,
             group_size=self.group_size,
             renderer=renderer,
@@ -294,7 +295,7 @@ class DeepcoderDatasetBuilder(RLDatasetBuilder):
             format_coef=self.format_coef,
             reward_timeout=self.reward_timeout,
         )
-        test_ds = DeepcoderDataset(
+        test_ds = DeepcoderDataset_Gem(
             batch_size=self.batch_size,
             group_size=1,
             renderer=renderer,

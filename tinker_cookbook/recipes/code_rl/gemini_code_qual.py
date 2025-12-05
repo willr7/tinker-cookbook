@@ -63,9 +63,7 @@ def call_gemini_cli(prompt: str, model: str = "gemini-2.5-flash") -> str:
             f"STDERR:\n{result.stderr}"
         )
 
-
     return result.stdout.strip()
-
 
 def grade_code_with_gemini(code: str, model: str = "gemini-2.5-flash") -> float:
     """
@@ -102,6 +100,8 @@ def grade_code_with_gemini(code: str, model: str = "gemini-2.5-flash") -> float:
 
 if __name__ == "__main__":
 
+    # test to see if this might work
+    
     code_snippet = textwrap.dedent("""
     def fibonacci(n):
         if n == 0:
@@ -118,6 +118,7 @@ if __name__ == "__main__":
     print("Grading code quality with gemini cli...")
     code_qual_score = grade_code_with_gemini(code_snippet)
     print("Finished grading")
+
     print("")
     print("--------------------------------------------------------------------------------")
     print(f"This is the code quality score produced by gemini cli: {code_qual_score}")
