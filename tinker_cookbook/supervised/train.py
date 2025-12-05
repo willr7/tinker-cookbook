@@ -32,7 +32,7 @@ from tinker_cookbook.tokenizer_utils import get_tokenizer
 from tinker_cookbook.utils import ml_log
 from tinker_cookbook.utils.lr_scheduling import compute_schedule_lr_multiplier
 from tinker_cookbook.utils.misc_utils import timed
-from tinker_cookbook.utils.trace import get_scope_context, scope, trace_init
+from tinker_cookbook.utils.trace import scope, update_scope_context, trace_init
 
 logger = logging.getLogger(__name__)
 
@@ -107,22 +107,24 @@ async def run_evals(
     checkpoint. Returned metrics are prefixed with ``test/`` so they can be logged next
     to the same-step training metrics.
     """
-    context = get_scope_context()
-    context.attributes["step"] = step
+    update_scope_context({"step": step})
 
     metrics = {}
     sampling_client = None
 
     @scope
     async def run_evaluator(evaluator: Evaluator) -> dict[str, float]:
-        context = get_scope_context()
-        context.attributes["step"] = step
-        context.attributes["evaluator_name"] = type(evaluator).__name__
+        update_scope_context(
+            {
+                "step": step,
+                "evaluator_name": type(evaluator).__name__,
+            }
+        )
         if isinstance(evaluator, TrainingClientEvaluator):
-            context.attributes["evaluator_type"] = "TrainingClientEvaluator"
+            update_scope_context({"evaluator_type": "TrainingClientEvaluator"})
             return await evaluator(training_client)
         elif isinstance(evaluator, SamplingClientEvaluator):
-            context.attributes["evaluator_type"] = "SamplingClientEvaluator"
+            update_scope_context({"evaluator_type": "SamplingClientEvaluator"})
             # Create sampling client lazily, only when needed
             nonlocal sampling_client
             if sampling_client is None:
@@ -137,7 +139,7 @@ async def run_evals(
     for evaluator in evaluators:
         eval_metrics = await run_evaluator(evaluator)
         # Add test/ prefix to all metrics
-        metrics.update({f"test/{k}": v for k, v in eval_metrics.items()})
+        metrics.update(eval_metrics)
 
     return metrics
 
@@ -187,19 +189,25 @@ async def main(config: Config):
         trace_init(output_file=os.path.join(config.log_path, "trace_events.jsonl"))
 
     service_client = tinker.ServiceClient(base_url=config.base_url)
-    load_state_path: str | None = (
-        resume_info["state_path"] if resume_info else config.load_checkpoint_path
-    )
 
     user_metadata: dict[str, str] = {}
     if wandb_link := ml_logger.get_logger_url():
         user_metadata["wandb_link"] = wandb_link
 
-    if load_state_path:
-        training_client = await service_client.create_training_client_from_state_async(
-            load_state_path, user_metadata
+    if resume_info:
+        # Resuming interrupted training - load optimizer state for proper continuation
+        training_client = (
+            await service_client.create_training_client_from_state_with_optimizer_async(
+                resume_info["state_path"], user_metadata
+            )
         )
-        logger.info(f"Loaded weights from {load_state_path}")
+        logger.info(f"Resumed training from {resume_info['state_path']}")
+    elif config.load_checkpoint_path:
+        # Starting fresh from a checkpoint - load weights only (fresh optimizer)
+        training_client = await service_client.create_training_client_from_state_async(
+            config.load_checkpoint_path, user_metadata
+        )
+        logger.info(f"Loaded weights from {config.load_checkpoint_path}")
     else:
         training_client = await service_client.create_lora_training_client_async(
             base_model=config.model_name,
@@ -225,8 +233,7 @@ async def main(config: Config):
     @scope
     async def submit_batch(epoch_idx: int, batch_idx: int) -> SubmittedBatch:
         step = epoch_idx * n_batches + batch_idx
-        context = get_scope_context()
-        context.attributes["step"] = step
+        update_scope_context({"step": step})
 
         batch_start_time = time.time()
         metrics: dict[str, int | float | str] = {"epoch": epoch_idx}
@@ -286,8 +293,7 @@ async def main(config: Config):
 
     @scope
     async def finish_batch(submitted: SubmittedBatch):
-        context = get_scope_context()
-        context.attributes["step"] = submitted.step
+        update_scope_context({"step": submitted.step})
 
         metrics = submitted.metrics
         metrics["progress"] = min((submitted.step + 1) / progress_denominator, 1.0)
