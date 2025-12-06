@@ -37,7 +37,7 @@ class CLIConfig:
 
     # Logging / eval / checkpoints
     log_dir: str | None = None
-    log_path: str | None = "/Users/willreed/projects/schoo/67920/project/final_project/tinker-cookbook/tinker_cookbook/recipes/code_rl/tests/claude_test/"
+    log_path: str | None = None
     wandb_project: str | None = None
     wandb_name: str | None = None
     compute_post_kl: bool = False
