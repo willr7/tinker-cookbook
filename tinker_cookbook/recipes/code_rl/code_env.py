@@ -160,6 +160,13 @@ class CodeEnv(ProblemEnv):
         correct_score = float(correct_answer_bool)
         total_reward = self.format_coef * (format_score - 1.0) + correct_score
 
+        # Log summary at top of page (CSS ordering puts .lt-summary at top)
+        logtree.log_summary([
+            {"label": "Correct", "value": correct_score, "thresholds": (1.0, 0.5)},
+            {"label": "Format", "value": format_score, "thresholds": (1.0, 0.5)},
+            {"label": "Reward", "value": total_reward, "format": "{:.2f}", "max_value": 1.0, "thresholds": (0.7, 0.3)},
+        ])
+
         # Log problem in a collapsible section
         with logtree.scope_header("Problem"):
             logtree.details(self.get_question(), summary="View Problem Statement", pre=True)

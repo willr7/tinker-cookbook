@@ -1,5 +1,15 @@
 # Changes Log
 
+## 2025-12-05: Add Summary Banner to CodeEnv Rollout Logs
+
+**File:** `code_env.py`
+
+### Changes:
+1. **Added `log_summary()` call in `step()`** - Now logs a summary banner with Correct, Format, and Reward metrics at the top of each rollout log. The CSS ordering in logtree automatically positions `.lt-summary` elements at the top of the page (after title/subtitle).
+
+### Motivation:
+- Provides quick at-a-glance results without scrolling through the problem/response/code sections
+
 ## 2025-12-05: Dark Mode and Summary Banner for HTML Logs
 
 **Files:**

@@ -24,8 +24,8 @@ class CLIConfig:
     seed: int = 0
 
     # Training hyperparameters
-    group_size: int = 16
-    groups_per_batch: int = 32
+    group_size: int = 8
+    groups_per_batch: int = 64
     learning_rate: float = 4e-5
     max_tokens: int = 24576
     kl_penalty_coef: float = 0.0
@@ -37,7 +37,7 @@ class CLIConfig:
     wandb_project: str | None = None
     wandb_name: str | None = None
     compute_post_kl: bool = False
-    eval_every: int = 5
+    eval_every: int = 20
     save_every: int = 5
 
     # Service configuration
