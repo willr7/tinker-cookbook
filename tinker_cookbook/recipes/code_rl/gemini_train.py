@@ -36,7 +36,7 @@ class CLIConfig:
     num_substeps: int = 1
 
     # hopefully speeds up training
-    code_qual_every_n: int = 10        # only call Gemini every N episodes
+    code_qual_every_n: int = 10        # only call Gemini every n episodes
 
     # Logging / eval / checkpoints
     log_dir: str | None = None

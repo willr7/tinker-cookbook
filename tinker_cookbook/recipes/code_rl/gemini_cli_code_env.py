@@ -179,7 +179,7 @@ class CodeEnv_Gemini(ProblemEnv):
                 code_qual_score = await asyncio.to_thread(
                     grade_code_with_gemini,
                     extracted_code,
-                    self.get_question(),
+                    # self.get_question(),
                 )
             except Exception as exc:
                 logger.warning("Gemini code-quality grading failed: %s", exc, exc_info=True)
