@@ -1,3 +1,7 @@
+import os
+# Prevent HuggingFace tokenizers fork warning - must be set before importing tokenizers
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import asyncio
 import logging
 from datetime import datetime
@@ -33,7 +37,7 @@ class CLIConfig:
 
     # Logging / eval / checkpoints
     log_dir: str | None = None
-    log_path: str | None = "/Users/willreed/projects/schoo/67920/project/final_project/tinker-cookbook/tinker_cookbook/recipes/code_rl/test2/"
+    log_path: str | None = "/Users/willreed/projects/schoo/67920/project/final_project/tinker-cookbook/tinker_cookbook/recipes/code_rl/tests/claude_test/"
     wandb_project: str | None = None
     wandb_name: str | None = None
     compute_post_kl: bool = False

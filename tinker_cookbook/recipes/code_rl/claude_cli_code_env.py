@@ -1,6 +1,5 @@
 """CodeEnv with Claude Code CLI for code quality grading."""
 
-import asyncio
 import json
 from functools import partial
 from typing import Any, Literal, Sequence, cast
@@ -14,7 +13,10 @@ from tinker_cookbook.recipes.code_rl.code_grading import (
     sandbox_check_correctness,
     taco_to_lcb_format,
 )
-from tinker_cookbook.recipes.code_rl.claude_code_qual import grade_code_with_claude
+from tinker_cookbook.recipes.code_rl.code_quality_grader import (
+    CodeQualityGrader,
+    create_claude_grader,
+)
 from tinker_cookbook.recipes.code_rl.lcb_utils import fetch_live_code_bench_system_prompt
 from tinker_cookbook import renderers
 from tinker_cookbook.rl.problem_env import ProblemEnv, ProblemGroupBuilder, logger
@@ -114,6 +116,7 @@ class CodeEnv_Claude(ProblemEnv):
         problem: str,
         tests: list[dict[str, Any]],
         renderer: renderers.Renderer,
+        grader: CodeQualityGrader,
         convo_prefix: list[renderers.Message] | None = None,
         format_coef: float = 0.1,
         reward_timeout: int = 6,
@@ -124,6 +127,7 @@ class CodeEnv_Claude(ProblemEnv):
         self.tests = tests
         self.reward_timeout = reward_timeout
         self.code_qual_weight = code_qual_weight
+        self.grader = grader
 
     def get_question(self) -> str:
         return self.problem
@@ -167,18 +171,10 @@ class CodeEnv_Claude(ProblemEnv):
         format_score = float(format_ok_bool)
         correct_score = float(correct_answer_bool)
 
-        # Compute code quality score using Claude
+        # Compute code quality score using Claude (with caching and sampling)
         code_qual_score = 0.0
         if extracted_code is not None and self.code_qual_weight > 0.0:
-            try:
-                # grade_code_with_claude is synchronous; run it in a thread
-                code_qual_score = await asyncio.to_thread(
-                    grade_code_with_claude,
-                    extracted_code,
-                )
-            except Exception as exc:
-                logger.warning("Claude code-quality grading failed: %s", exc, exc_info=True)
-                code_qual_score = 0.0
+            code_qual_score = await self.grader.grade(extracted_code)
 
         # Total reward includes code quality score
         total_reward = (
@@ -238,6 +234,7 @@ class DeepcoderDataset_Claude(RLDataset):
         batch_size: int,
         group_size: int,
         renderer: renderers.Renderer,
+        grader: CodeQualityGrader,
         convo_prefix: list[renderers.Message] | None = None,
         split: Literal["train", "test"] = "train",
         seed: int = 0,
@@ -251,6 +248,7 @@ class DeepcoderDataset_Claude(RLDataset):
         self.batch_size = batch_size
         self.group_size = group_size if split == "train" else 1
         self.renderer = renderer
+        self.grader = grader
         self.convo_prefix = convo_prefix
         self.format_coef = format_coef
         self.reward_timeout = reward_timeout
@@ -289,6 +287,7 @@ class DeepcoderDataset_Claude(RLDataset):
                 question,
                 tests,
                 self.renderer,
+                self.grader,
                 convo_prefix=self.convo_prefix,
                 format_coef=self.format_coef,
                 reward_timeout=self.reward_timeout,
@@ -310,14 +309,23 @@ class DeepcoderDatasetBuilder_Claude(RLDatasetBuilder):
     format_coef: float = 0.1
     reward_timeout: int = 6
     code_qual_weight: float = 0.1
+    code_qual_sample_rate: float = 0.2  # Only grade 20% of code by default
 
     async def __call__(self) -> tuple[DeepcoderDataset_Claude, DeepcoderDataset_Claude]:
         tokenizer = get_tokenizer(self.model_name_for_tokenizer)
         renderer = renderers.get_renderer(self.renderer_name, tokenizer=tokenizer)
+
+        # Create a shared grader with caching and sampling
+        grader = create_claude_grader(
+            sample_rate=self.code_qual_sample_rate,
+            seed=self.seed,
+        )
+
         train_ds = DeepcoderDataset_Claude(
             batch_size=self.batch_size,
             group_size=self.group_size,
             renderer=renderer,
+            grader=grader,
             convo_prefix=self.convo_prefix,
             split="train",
             seed=self.seed,
@@ -329,6 +337,7 @@ class DeepcoderDatasetBuilder_Claude(RLDatasetBuilder):
             batch_size=self.batch_size,
             group_size=1,
             renderer=renderer,
+            grader=grader,  # Share the same grader for caching benefits
             convo_prefix=self.convo_prefix,
             split="test",
             seed=self.seed,

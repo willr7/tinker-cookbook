@@ -1,3 +1,7 @@
+import os
+# Prevent HuggingFace tokenizers fork warning - must be set before importing tokenizers
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import asyncio
 import logging
 from datetime import datetime

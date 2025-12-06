@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import textwrap
 
@@ -68,11 +69,16 @@ def call_gemini_cli(prompt: str, model: str = "gemini-2.5-flash") -> str:
         "--prompt", prompt,
     ]
 
+    # Prevent HuggingFace tokenizers fork warning
+    env = os.environ.copy()
+    env["TOKENIZERS_PARALLELISM"] = "false"
+
     result = subprocess.run(
         cmd,
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
     if result.returncode != 0:
         raise RuntimeError(

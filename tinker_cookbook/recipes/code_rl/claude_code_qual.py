@@ -2,6 +2,7 @@
 """Code quality grading using Claude Code CLI."""
 
 import json
+import os
 import re
 import subprocess
 import textwrap
@@ -51,11 +52,16 @@ def call_claude_cli(prompt: str) -> str:
         "--output-format", "text",
     ]
 
+    # Prevent HuggingFace tokenizers fork warning
+    env = os.environ.copy()
+    env["TOKENIZERS_PARALLELISM"] = "false"
+
     result = subprocess.run(
         cmd,
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
 
     if result.returncode != 0:

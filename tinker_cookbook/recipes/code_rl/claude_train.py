@@ -1,5 +1,9 @@
 """Training script for DeepCoder RL with Claude Code CLI code quality grading."""
 
+import os
+# Prevent HuggingFace tokenizers fork warning - must be set before importing tokenizers
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import asyncio
 import logging
 from datetime import datetime
@@ -35,6 +39,7 @@ class CLIConfig:
 
     # Code quality grading
     code_qual_weight: float = 0.1  # Weight for Claude code quality score in reward
+    code_qual_sample_rate: float = 0.2  # Fraction of code to grade (0.2 = 20%, saves tokens)
 
     # Logging / eval / checkpoints
     log_dir: str | None = None
@@ -82,6 +87,7 @@ async def cli_main(cli_config: CLIConfig) -> None:
         group_size=cli_config.group_size,
         seed=cli_config.seed,
         code_qual_weight=cli_config.code_qual_weight,
+        code_qual_sample_rate=cli_config.code_qual_sample_rate,
     )
 
     config = Config(

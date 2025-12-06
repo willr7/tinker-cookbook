@@ -1,5 +1,41 @@
 # Changes Log
 
+## 2025-12-05: Efficient Code Quality Grading with Caching and Sampling
+
+**Files:**
+- `code_quality_grader.py` (new)
+- `claude_cli_code_env.py` (updated)
+- `claude_train.py` (updated)
+
+### Changes:
+
+1. **`code_quality_grader.py`** - Efficient grading wrapper:
+   - `CodeQualityGrader` class with LRU caching and random sampling
+   - Caches scores by normalized code hash (ignores whitespace/comments)
+   - `sample_rate` parameter: only grade X% of submissions (default 20%)
+   - `GraderStats` tracks cache hits, API calls, sample-outs
+   - `create_claude_grader()` and `create_gemini_grader()` factory functions
+
+2. **Updated `claude_cli_code_env.py`**:
+   - `CodeEnv_Claude` now takes a shared `grader` instance
+   - `DeepcoderDatasetBuilder_Claude` creates grader and shares across train/test
+   - New `code_qual_sample_rate` parameter (default 0.2)
+
+3. **Updated `claude_train.py`**:
+   - Added `code_qual_sample_rate` CLI parameter
+
+### Token Savings:
+- **Caching**: RL generates similar code; cache hits avoid redundant API calls
+- **Sampling**: Grade 20% of code by default → 5x reduction in API calls
+- Combined: potentially 10x+ reduction in token usage
+
+### Usage:
+```bash
+python -m tinker_cookbook.recipes.code_rl.claude_train \
+  code_qual_sample_rate=0.1 \  # Grade only 10% of submissions
+  code_qual_weight=0.1
+```
+
 ## 2025-12-05: Add Claude Code CLI for Code Quality Grading
 
 **Files:**
