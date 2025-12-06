@@ -1,3 +1,6 @@
+"""CodeEnv with Claude Code CLI for code quality grading."""
+
+import asyncio
 import json
 from functools import partial
 from typing import Any, Literal, Sequence, cast
@@ -11,12 +14,7 @@ from tinker_cookbook.recipes.code_rl.code_grading import (
     sandbox_check_correctness,
     taco_to_lcb_format,
 )
-
-import asyncio 
-from tinker_cookbook.recipes.code_rl.gemini_code_qual import (
-    grade_code_with_gemini
-)
-
+from tinker_cookbook.recipes.code_rl.claude_code_qual import grade_code_with_claude
 from tinker_cookbook.recipes.code_rl.lcb_utils import fetch_live_code_bench_system_prompt
 from tinker_cookbook import renderers
 from tinker_cookbook.rl.problem_env import ProblemEnv, ProblemGroupBuilder, logger
@@ -108,7 +106,9 @@ def _build_question(example: dict[str, Any]) -> str | None:
     return fetch_live_code_bench_system_prompt(question)
 
 
-class CodeEnv_Gemini(ProblemEnv):
+class CodeEnv_Claude(ProblemEnv):
+    """Code environment that uses Claude Code CLI for code quality grading."""
+
     def __init__(
         self,
         problem: str,
@@ -117,15 +117,13 @@ class CodeEnv_Gemini(ProblemEnv):
         convo_prefix: list[renderers.Message] | None = None,
         format_coef: float = 0.1,
         reward_timeout: int = 6,
-        code_qual_every_n: int = 10,
+        code_qual_weight: float = 0.1,
     ):
         super().__init__(renderer, convo_prefix, format_coef=format_coef)
         self.problem = problem
         self.tests = tests
         self.reward_timeout = reward_timeout
-        self.code_qual_every_n = code_qual_every_n
-        self.time_step = 0
-        # self.code_qual_score = 0
+        self.code_qual_weight = code_qual_weight
 
     def get_question(self) -> str:
         return self.problem
@@ -134,7 +132,7 @@ class CodeEnv_Gemini(ProblemEnv):
         return extract_code_from_model(sample_str) is not None
 
     def check_answer(self, sample_str: str) -> bool:
-        """Not used - CodeEnv_Gemini uses async check_sandbox_correctness instead."""
+        """Not used - CodeEnv_Claude uses async check_sandbox_correctness instead."""
         return False
 
     async def check_sandbox_correctness(self, sample_str: str) -> tuple[bool, str | None]:
@@ -162,8 +160,6 @@ class CodeEnv_Gemini(ProblemEnv):
         return ""
 
     async def step(self, action: Action) -> StepResult:
-        self.time_step += 1
-
         message, parse_success = self.renderer.parse_response(action)
         content = message["content"]
         format_ok_bool = bool(parse_success) and self.check_format(content)
@@ -171,22 +167,25 @@ class CodeEnv_Gemini(ProblemEnv):
         format_score = float(format_ok_bool)
         correct_score = float(correct_answer_bool)
 
-        # Only compute code quality score every N steps for efficiency
+        # Compute code quality score using Claude
         code_qual_score = 0.0
-        if extracted_code is not None and self.time_step % self.code_qual_every_n == 0:
+        if extracted_code is not None and self.code_qual_weight > 0.0:
             try:
-                # grade_code_with_gemini is synchronous; run it in a thread
+                # grade_code_with_claude is synchronous; run it in a thread
                 code_qual_score = await asyncio.to_thread(
-                    grade_code_with_gemini,
+                    grade_code_with_claude,
                     extracted_code,
-                    self.get_question(),
                 )
             except Exception as exc:
-                logger.warning("Gemini code-quality grading failed: %s", exc, exc_info=True)
+                logger.warning("Claude code-quality grading failed: %s", exc, exc_info=True)
                 code_qual_score = 0.0
 
         # Total reward includes code quality score
-        total_reward = self.format_coef * (format_score - 1.0) + correct_score + code_qual_score
+        total_reward = (
+            self.format_coef * (format_score - 1.0)
+            + correct_score
+            + self.code_qual_weight * code_qual_score
+        )
 
         # Log summary at top of page (CSS ordering puts .lt-summary at top)
         logtree.log_summary([
@@ -232,7 +231,8 @@ class CodeEnv_Gemini(ProblemEnv):
             },
         )
 
-class DeepcoderDataset_Gem(RLDataset):
+
+class DeepcoderDataset_Claude(RLDataset):
     def __init__(
         self,
         batch_size: int,
@@ -243,7 +243,7 @@ class DeepcoderDataset_Gem(RLDataset):
         seed: int = 0,
         format_coef: float = 0.1,
         reward_timeout: int = 6,
-        code_qual_every_n: int = 10,
+        code_qual_weight: float = 0.1,
     ):
         self.ds = _load_deepcoder_split(split)
         if split == "train":
@@ -254,7 +254,7 @@ class DeepcoderDataset_Gem(RLDataset):
         self.convo_prefix = convo_prefix
         self.format_coef = format_coef
         self.reward_timeout = reward_timeout
-        self.code_qual_every_n = code_qual_every_n
+        self.code_qual_weight = code_qual_weight
 
     def __len__(self) -> int:
         return (len(self.ds) + self.batch_size - 1) // self.batch_size
@@ -263,7 +263,7 @@ class DeepcoderDataset_Gem(RLDataset):
         start = index * self.batch_size
         end = min((index + 1) * self.batch_size, len(self.ds))
         if start >= end:
-            raise IndexError("Incorrect batch index for DeepcoderDataset_Gem")
+            raise IndexError("Incorrect batch index for DeepcoderDataset_Claude")
         builders: list[EnvGroupBuilder] = []
         for row in self.ds.select(range(start, end)):
             builder = self._make_env_group_builder(cast(dict[str, Any], row), self.group_size)
@@ -285,14 +285,14 @@ class DeepcoderDataset_Gem(RLDataset):
             return None
         return ProblemGroupBuilder(
             env_thunk=partial(
-                CodeEnv_Gemini,
+                CodeEnv_Claude,
                 question,
                 tests,
                 self.renderer,
                 convo_prefix=self.convo_prefix,
                 format_coef=self.format_coef,
                 reward_timeout=self.reward_timeout,
-                code_qual_every_n=self.code_qual_every_n,
+                code_qual_weight=self.code_qual_weight,
             ),
             num_envs=group_size,
             dataset_name="deepcoder",
@@ -300,7 +300,7 @@ class DeepcoderDataset_Gem(RLDataset):
 
 
 @chz.chz
-class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
+class DeepcoderDatasetBuilder_Claude(RLDatasetBuilder):
     batch_size: int
     model_name_for_tokenizer: str
     renderer_name: str
@@ -309,12 +309,12 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
     seed: int = 0
     format_coef: float = 0.1
     reward_timeout: int = 6
-    code_qual_every_n: int = 10
+    code_qual_weight: float = 0.1
 
-    async def __call__(self) -> tuple[DeepcoderDataset_Gem, DeepcoderDataset_Gem]:
+    async def __call__(self) -> tuple[DeepcoderDataset_Claude, DeepcoderDataset_Claude]:
         tokenizer = get_tokenizer(self.model_name_for_tokenizer)
         renderer = renderers.get_renderer(self.renderer_name, tokenizer=tokenizer)
-        train_ds = DeepcoderDataset_Gem(
+        train_ds = DeepcoderDataset_Claude(
             batch_size=self.batch_size,
             group_size=self.group_size,
             renderer=renderer,
@@ -323,9 +323,9 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
             seed=self.seed,
             format_coef=self.format_coef,
             reward_timeout=self.reward_timeout,
-            code_qual_every_n=self.code_qual_every_n,
+            code_qual_weight=self.code_qual_weight,
         )
-        test_ds = DeepcoderDataset_Gem(
+        test_ds = DeepcoderDataset_Claude(
             batch_size=self.batch_size,
             group_size=1,
             renderer=renderer,
@@ -334,6 +334,6 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
             seed=self.seed,
             format_coef=self.format_coef,
             reward_timeout=self.reward_timeout,
-            code_qual_every_n=self.code_qual_every_n,
+            code_qual_weight=self.code_qual_weight,
         )
         return train_ds, test_ds

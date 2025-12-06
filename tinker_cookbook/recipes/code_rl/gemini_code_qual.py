@@ -72,9 +72,8 @@ def call_gemini_cli(prompt: str, model: str = "gemini-2.5-flash") -> str:
         cmd,
         capture_output=True,
         text=True,
-        check=True,  # raises CalledProcessError if CLI fails
+        check=False,
     )
-    print("This is the result after calling the subprocessing: ", result)
     if result.returncode != 0:
         raise RuntimeError(
             "Gemini CLI failed.\n"
@@ -115,12 +114,7 @@ def grade_code_with_gemini(
     score = float(data["score"])
 
     # clamp to [0, 1]
-    if score < 0.0:
-        score = 0.0
-    if score > 1.0:
-        score = 1.0
-
-    return score
+    return max(0.0, min(1.0, score))
 
 if __name__ == "__main__":
 

@@ -1,5 +1,59 @@
 # Changes Log
 
+## 2025-12-05: Add Claude Code CLI for Code Quality Grading
+
+**Files:**
+- `claude_code_qual.py` (new)
+- `claude_cli_code_env.py` (new)
+- `claude_train.py` (new)
+
+### Changes:
+
+1. **`claude_code_qual.py`** - Core grading module using Claude Code CLI:
+   - `build_claude_prompt(code)` - Creates prompt asking Claude to grade code quality (0.0-1.0)
+   - `call_claude_cli(prompt)` - Calls `claude -p "<prompt>" --output-format text`
+   - `parse_score_from_response(raw)` - Robust JSON parsing with fallbacks
+   - `grade_code_with_claude(code)` - Main function returning clamped score
+
+2. **`claude_cli_code_env.py`** - Environment with Claude code quality grading:
+   - `CodeEnv_Claude` - Extends `ProblemEnv` with `code_qual_weight` parameter
+   - `check_sandbox_correctness()` returns `tuple[bool, str | None]` (consistent API)
+   - `step()` includes `log_summary()` and collapsible sections
+   - `DeepcoderDataset_Claude` and `DeepcoderDatasetBuilder_Claude` with `code_qual_weight`
+
+3. **`claude_train.py`** - Training CLI entry point:
+   - Uses `DeepcoderDatasetBuilder_Claude`
+   - Adds `code_qual_weight` CLI parameter (default 0.1)
+   - Default model: `Qwen/Qwen3-4B-Instruct-2507`
+
+### Motivation:
+- Provide alternative to Gemini for code quality grading
+- Use Claude Code CLI which may already be installed/configured
+
+## 2025-12-05: Fix Gemini Code Quality Grading Bugs
+
+**Files:**
+- `gemini_code_qual.py`
+- `gemini_cli_code_env.py`
+
+### Changes:
+
+1. **`gemini_code_qual.py`**:
+   - Fixed unreachable code: removed `check=True` from subprocess.run (was conflicting with manual returncode check)
+   - Removed debug print statement
+   - Simplified score clamping to `max(0.0, min(1.0, score))`
+
+2. **`gemini_cli_code_env.py`**:
+   - Fixed `check_sandbox_correctness()` to return `tuple[bool, str | None]` (was returning just `bool`)
+   - Added `log_summary()` call for summary banner at top of HTML logs
+   - Added collapsible sections for Problem, Model Response, Submitted Code, Results
+   - Now passes `question` to `grade_code_with_gemini()` for context-aware grading
+
+### Motivation:
+- Fix bugs that would cause runtime errors or unreachable code
+- Consistent API across CodeEnv variants
+- Better HTML log readability
+
 ## 2025-12-05: Add Summary Banner to CodeEnv Rollout Logs
 
 **File:** `code_env.py`
