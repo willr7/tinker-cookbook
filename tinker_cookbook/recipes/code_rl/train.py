@@ -37,7 +37,7 @@ class CLIConfig:
 
     # Logging / eval / checkpoints
     log_dir: str | None = None
-    log_path: str | None = None # SET THIS
+    log_path: str | None = None
     wandb_project: str | None = None
     wandb_name: str | None = None
     compute_post_kl: bool = False
