@@ -1,26 +1,46 @@
-# gemini_grader.py
 import json
 import subprocess
 import textwrap
 
 
-def build_gemini_prompt(code: str) -> str:
+def build_gemini_prompt(code: str, question: str | None = None) -> str:
     """
     Build a strict grading prompt for Gemini.
     We force it to respond with pure JSON so we can parse it easily.
     """
 
+    question_block = ""
+    if question:
+        question_block = textwrap.dedent(f"""
+        The original programming problem was:
+
+        \"\"\" 
+        {question}
+        \"\"\"
+
+        You must judge how well the code solves this problem AND its code quality.
+        """)
+
     return textwrap.dedent(f"""
-    You are a strict code-quality grader.
+    You are a strict code-quality and solution-correctness grader.
 
-    You will be given a code snippet. Your task is to grade how well the code
-    is designed on a continuous scale from 0.0 to 1.0.
+    You will be given:
+    - A programming problem statement.
+    - A code snippet that is *intended* to solve that problem.
 
-    Score criteria (equally weighted):
-    - Readability (clear structure, meaningful names, comments/docstrings)
-    - Modularity (functions, separation of concerns, avoid duplication)
-    - Robustness (basic error handling, sanity checks when appropriate)
-    - Maintainability (easy to extend, minimal hard-coding, avoids hacks)
+    Your task is to grade how good the code is on a continuous scale from 0.0 to 1.0,
+    considering BOTH:
+
+    (1) Solution quality: how well the code appears to solve the given problem.
+        - Does the code implement the required logic?
+        - Does it appear correct for typical and edge cases (as far as can be inferred)?
+    (2) Code quality/style:
+        - Readability (clear structure, meaningful names, comments/docstrings)
+        - Modularity (functions, separation of concerns, avoid duplication)
+        - Robustness (basic error handling, sanity checks when appropriate)
+        - Maintainability (easy to extend, minimal hard-coding, avoids hacks)
+
+    {question_block}
 
     Output format requirements:
     - Respond with *only* a single JSON object.
@@ -65,19 +85,23 @@ def call_gemini_cli(prompt: str, model: str = "gemini-2.5-flash") -> str:
 
     return result.stdout.strip()
 
-def grade_code_with_gemini(code: str, model: str = "gemini-2.5-flash") -> float:
+def grade_code_with_gemini(
+    code: str,
+    question: str | None = None,
+    model: str = "gemini-2.5-flash",
+) -> float:
     """
-    Builds the grading prompt, calls gemini via cli, and parses the json and returns the score float in [0,1]
+    Builds the grading prompt (problem + code), calls Gemini via CLI,
+    parses the JSON, and returns a score float in [0,1].
     """
 
-    prompt = build_gemini_prompt(code)
+    prompt = build_gemini_prompt(code, question=question)
     raw = call_gemini_cli(prompt, model=model)
 
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        
-        # just gets the text from prompt that corresponds to the code quality score
+        # Try to pull out the JSON object if Gemini wrapped it in text
         import re
 
         match = re.search(r"\{.*\}", raw, re.DOTALL)
@@ -90,7 +114,7 @@ def grade_code_with_gemini(code: str, model: str = "gemini-2.5-flash") -> float:
 
     score = float(data["score"])
 
-    # keeps score in range of 0 to 1
+    # clamp to [0, 1]
     if score < 0.0:
         score = 0.0
     if score > 1.0:
@@ -111,6 +135,8 @@ if __name__ == "__main__":
         else:
             return fibonacci(n-1) + fibonacci(n-2)
     """)
+
+    problem = "Write a function fibonacci(n) that returns the n-th Fibonacci number."
 
     # make sure to make a gemini api key and authenticate before running the following
     #  export GEMINI_API_KEY="{api key}"

@@ -117,11 +117,15 @@ class CodeEnv_Gemini(ProblemEnv):
         convo_prefix: list[renderers.Message] | None = None,
         format_coef: float = 0.1,
         reward_timeout: int = 6,
+        code_qual_every_n: int = 10,
     ):
         super().__init__(renderer, convo_prefix, format_coef=format_coef)
         self.problem = problem
         self.tests = tests
         self.reward_timeout = reward_timeout
+        self.code_qual_every_n = code_qual_every_n
+        self.time_step = 0
+        # self.code_qual_score = 0
 
     def get_question(self) -> str:
         return self.problem
@@ -144,7 +148,7 @@ class CodeEnv_Gemini(ProblemEnv):
             success, details = await sandbox_check_correctness(
                 self.tests, code, timeout=self.reward_timeout
             )
-            status = "✓" if success else "✗"
+            status = "good" if success else "bad"
             logtree.log_text(
                 f"Sandbox result {status}: {'All tests passed' if success else 'Failed'}"
             )
@@ -158,6 +162,8 @@ class CodeEnv_Gemini(ProblemEnv):
         return ""
 
     async def step(self, action: Action) -> StepResult:
+        self.time_step +=1
+
         message, parse_success = self.renderer.parse_response(action)
         content = message["content"]
         format_ok_bool = bool(parse_success) and self.check_format(content)
@@ -167,11 +173,11 @@ class CodeEnv_Gemini(ProblemEnv):
 
         # IDEA FOR SPEED IMPROVEMENT: Only compute score quality every 10 (or some k) steps
         # computing the code quality score
-        code_qual_score = 0.0
+        code_qual_score = 0
         # gets the code from the model output
         code = extract_code_from_model(content)
 
-        if code is not None:
+        if code is not None and self.time_step % self.code_qual_every_n == 0:
             try:
                 # grade_code_with_gemini is synchronous; run it in a thread
                 code_qual_score = await asyncio.to_thread(
@@ -190,8 +196,8 @@ class CodeEnv_Gemini(ProblemEnv):
         if reference := self.get_reference_answer():
             logtree.log_text(f"Reference Answer: {reference}")
         logtree.log_text(
-            f"Format Valid: {'✓' if format_ok_bool else '✗'}, "
-            f"Correct: {'✓' if correct_answer_bool else '✗'}, "
+            f"Format Valid: {'True' if format_ok_bool else 'False'}, "
+            f"Correct: {'True' if correct_answer_bool else 'False'}, "
             f"Reward: {total_reward:.2f}"
         )
 
@@ -218,6 +224,7 @@ class DeepcoderDataset_Gem(RLDataset):
         seed: int = 0,
         format_coef: float = 0.1,
         reward_timeout: int = 6,
+        code_qual_every_n: int = 10,
     ):
         self.ds = _load_deepcoder_split(split)
         if split == "train":
@@ -228,6 +235,7 @@ class DeepcoderDataset_Gem(RLDataset):
         self.convo_prefix = convo_prefix
         self.format_coef = format_coef
         self.reward_timeout = reward_timeout
+        self.code_qual_every_n = code_qual_every_n
 
     def __len__(self) -> int:
         return (len(self.ds) + self.batch_size - 1) // self.batch_size
@@ -265,6 +273,7 @@ class DeepcoderDataset_Gem(RLDataset):
                 convo_prefix=self.convo_prefix,
                 format_coef=self.format_coef,
                 reward_timeout=self.reward_timeout,
+                code_qual_every_n=self.code_qual_every_n,
             ),
             num_envs=group_size,
             dataset_name="deepcoder",
@@ -281,6 +290,7 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
     seed: int = 0
     format_coef: float = 0.1
     reward_timeout: int = 6
+    code_qual_every_n: int = 10
 
     async def __call__(self) -> tuple[DeepcoderDataset_Gem, DeepcoderDataset_Gem]:
         tokenizer = get_tokenizer(self.model_name_for_tokenizer)
@@ -294,6 +304,7 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
             seed=self.seed,
             format_coef=self.format_coef,
             reward_timeout=self.reward_timeout,
+            code_qual_every_n=self.code_qual_every_n,
         )
         test_ds = DeepcoderDataset_Gem(
             batch_size=self.batch_size,
@@ -304,5 +315,6 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
             seed=self.seed,
             format_coef=self.format_coef,
             reward_timeout=self.reward_timeout,
+            code_qual_every_n=self.code_qual_every_n,
         )
         return train_ds, test_ds

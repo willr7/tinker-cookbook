@@ -31,6 +31,9 @@ class CLIConfig:
     kl_penalty_coef: float = 0.0
     num_substeps: int = 1
 
+    # hopefully speeds up training
+    code_qual_every_n: int = 10        # only call Gemini every N episodes
+
     # Logging / eval / checkpoints
     log_dir: str | None = None
     log_path: str | None = None
@@ -76,6 +79,7 @@ async def cli_main(cli_config: CLIConfig) -> None:
         renderer_name=renderer_name,
         group_size=cli_config.group_size,
         seed=cli_config.seed,
+        code_qual_every_n=cli_config.code_qual_every_n,
     )
 
     config = Config(
