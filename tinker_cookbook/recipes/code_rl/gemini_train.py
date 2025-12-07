@@ -37,6 +37,7 @@ class CLIConfig:
 
     # hopefully speeds up training
     code_qual_every_n: int = 10        # only call Gemini every n episodes
+    gemini_weight: float=0.2
 
     # Logging / eval / checkpoints
     log_dir: str | None = None
@@ -71,7 +72,7 @@ async def cli_main(cli_config: CLIConfig) -> None:
 
     # Set log path
     if cli_config.log_path is not None:
-        log_path = cli_config.log_path
+        log_path = f"{cli_config.log_path}/{run_name}"
     else:
         log_path = f"/tmp/tinker-examples/code_rl/{run_name}"
 
@@ -84,6 +85,7 @@ async def cli_main(cli_config: CLIConfig) -> None:
         group_size=cli_config.group_size,
         seed=cli_config.seed,
         code_qual_every_n=cli_config.code_qual_every_n,
+        gemini_weight=cli_config.gemini_weight
     )
 
     config = Config(

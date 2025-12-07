@@ -118,6 +118,7 @@ class CodeEnv_Gemini(ProblemEnv):
         format_coef: float = 0.1,
         reward_timeout: int = 6,
         code_qual_every_n: int = 10,
+        gemini_weight: float = 0.2
     ):
         super().__init__(renderer, convo_prefix, format_coef=format_coef)
         self.problem = problem
@@ -125,7 +126,7 @@ class CodeEnv_Gemini(ProblemEnv):
         self.reward_timeout = reward_timeout
         self.code_qual_every_n = code_qual_every_n
         self.time_step = 0
-        # self.code_qual_score = 0
+        self.gemini_weight = gemini_weight
 
     def get_question(self) -> str:
         return self.problem
@@ -186,7 +187,7 @@ class CodeEnv_Gemini(ProblemEnv):
                 code_qual_score = 0.0
 
         # Total reward includes code quality score
-        total_reward = self.format_coef * (format_score - 1.0) + correct_score + code_qual_score
+        total_reward = self.format_coef * (format_score - 1.0) + correct_score + code_qual_score * self.gemini_weight
 
         # Log summary at top of page (CSS ordering puts .lt-summary at top)
         logtree.log_summary([
@@ -244,6 +245,7 @@ class DeepcoderDataset_Gem(RLDataset):
         format_coef: float = 0.1,
         reward_timeout: int = 6,
         code_qual_every_n: int = 10,
+        gemini_weight: float = 0.2
     ):
         self.ds = _load_deepcoder_split(split)
         if split == "train":
@@ -255,6 +257,7 @@ class DeepcoderDataset_Gem(RLDataset):
         self.format_coef = format_coef
         self.reward_timeout = reward_timeout
         self.code_qual_every_n = code_qual_every_n
+        self.gemini_weight = gemini_weight
 
     def __len__(self) -> int:
         return (len(self.ds) + self.batch_size - 1) // self.batch_size
@@ -293,6 +296,7 @@ class DeepcoderDataset_Gem(RLDataset):
                 format_coef=self.format_coef,
                 reward_timeout=self.reward_timeout,
                 code_qual_every_n=self.code_qual_every_n,
+                gemini_weight=self.gemini_weight
             ),
             num_envs=group_size,
             dataset_name="deepcoder",
@@ -310,6 +314,7 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
     format_coef: float = 0.1
     reward_timeout: int = 6
     code_qual_every_n: int = 10
+    gemini_weight:float =0.2
 
     async def __call__(self) -> tuple[DeepcoderDataset_Gem, DeepcoderDataset_Gem]:
         tokenizer = get_tokenizer(self.model_name_for_tokenizer)
@@ -324,6 +329,7 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
             format_coef=self.format_coef,
             reward_timeout=self.reward_timeout,
             code_qual_every_n=self.code_qual_every_n,
+            gemini_weight=self.gemini_weight
         )
         test_ds = DeepcoderDataset_Gem(
             batch_size=self.batch_size,
@@ -335,5 +341,6 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
             format_coef=self.format_coef,
             reward_timeout=self.reward_timeout,
             code_qual_every_n=self.code_qual_every_n,
+            gemini_weight=self.gemini_weight
         )
         return train_ds, test_ds
