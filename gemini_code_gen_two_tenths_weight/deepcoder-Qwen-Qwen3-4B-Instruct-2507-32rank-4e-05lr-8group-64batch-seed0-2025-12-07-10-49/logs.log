@@ -1,0 +1,5 @@
+tinker_cookbook.utils.ml_log:490 [INFO] Logging to: gemini_code_gen_two_tenths_weight\deepcoder-Qwen-Qwen3-4B-Instruct-2507-32rank-4e-05lr-8group-64batch-seed0-2025-12-07-10-49
+tinker_cookbook.checkpoint_utils:21 [INFO] No checkpoints found at gemini_code_gen_two_tenths_weight/deepcoder-Qwen-Qwen3-4B-Instruct-2507-32rank-4e-05lr-8group-64batch-seed0-2025-12-07-10-49\checkpoints.jsonl
+tinker_cookbook.checkpoint_utils:52 [INFO] No checkpoints found with key state_path in gemini_code_gen_two_tenths_weight/deepcoder-Qwen-Qwen3-4B-Instruct-2507-32rank-4e-05lr-8group-64batch-seed0-2025-12-07-10-49
+tinker.lib.public_interfaces.service_client:66 [INFO] ServiceClient initialized for session 4ed229c0-66cc-59d0-b9f1-a4e68f26d35a
+tinker.lib.public_interfaces.service_client:144 [INFO] Creating TrainingClient for model_id='4ed229c0-66cc-59d0-b9f1-a4e68f26d35a:train:0'
