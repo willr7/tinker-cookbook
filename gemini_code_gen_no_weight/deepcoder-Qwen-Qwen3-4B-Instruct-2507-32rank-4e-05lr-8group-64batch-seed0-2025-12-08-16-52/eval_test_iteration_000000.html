@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Running evaluation test 0</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+
+/* === Light Theme (Default) === */
+:root {
+    --lt-bg: #f5f5f5;
+    --lt-text: #333;
+    --lt-card: white;
+    --lt-accent: #2563eb;
+    --lt-border: #e5e7eb;
+    --lt-sub: #666;
+    --lt-mono: "Courier New", monospace;
+    --lt-shadow: rgba(0,0,0,0.1);
+    /* Summary colors */
+    --lt-success: #22c55e;
+    --lt-warning: #f59e0b;
+    --lt-danger: #ef4444;
+    --lt-progress-bg: #e5e7eb;
+    /* Role colors for messages */
+    --lt-user-bg: #e3f2fd;
+    --lt-user-border: #1976d2;
+    --lt-user-text: #1565c0;
+    --lt-assistant-bg: #f3e5f5;
+    --lt-assistant-border: #7b1fa2;
+    --lt-assistant-text: #6a1b9a;
+    --lt-system-bg: #fff3e0;
+    --lt-system-border: #f57c00;
+    --lt-system-text: #e65100;
+    --lt-tool-bg: #e8f5e9;
+    --lt-tool-border: #388e3c;
+    --lt-tool-text: #2e7d32;
+    /* Answer/reward badges */
+    --lt-answer-bg: #dbeafe;
+    --lt-answer-text: #1e40af;
+    --lt-reward-bg: #dcfce7;
+    --lt-reward-text: #166534;
+    /* Exception styling */
+    --lt-exc-bg: #fee;
+    --lt-exc-border: #c00;
+    --lt-exc-text: #c00;
+}
+
+/* === Dark Theme (System Preference) === */
+@media (prefers-color-scheme: dark) {
+    :root:not(.light-mode) {
+        --lt-bg: #1a1a2e;
+        --lt-text: #e5e5e5;
+        --lt-card: #16213e;
+        --lt-accent: #60a5fa;
+        --lt-border: #374151;
+        --lt-sub: #9ca3af;
+        --lt-shadow: rgba(0,0,0,0.3);
+        --lt-progress-bg: #374151;
+        /* Role colors for messages (dark) */
+        --lt-user-bg: #1e3a5f;
+        --lt-user-border: #60a5fa;
+        --lt-user-text: #93c5fd;
+        --lt-assistant-bg: #3b1f4b;
+        --lt-assistant-border: #a855f7;
+        --lt-assistant-text: #c4b5fd;
+        --lt-system-bg: #422006;
+        --lt-system-border: #f59e0b;
+        --lt-system-text: #fcd34d;
+        --lt-tool-bg: #14532d;
+        --lt-tool-border: #22c55e;
+        --lt-tool-text: #86efac;
+        /* Answer/reward badges (dark) */
+        --lt-answer-bg: #1e3a5f;
+        --lt-answer-text: #93c5fd;
+        --lt-reward-bg: #14532d;
+        --lt-reward-text: #86efac;
+        /* Exception styling (dark) */
+        --lt-exc-bg: #3b1515;
+        --lt-exc-border: #ef4444;
+        --lt-exc-text: #fca5a5;
+    }
+}
+
+/* === Dark Theme (Manual Toggle) === */
+:root.dark-mode {
+    --lt-bg: #1a1a2e;
+    --lt-text: #e5e5e5;
+    --lt-card: #16213e;
+    --lt-accent: #60a5fa;
+    --lt-border: #374151;
+    --lt-sub: #9ca3af;
+    --lt-shadow: rgba(0,0,0,0.3);
+    --lt-progress-bg: #374151;
+    /* Role colors for messages (dark) */
+    --lt-user-bg: #1e3a5f;
+    --lt-user-border: #60a5fa;
+    --lt-user-text: #93c5fd;
+    --lt-assistant-bg: #3b1f4b;
+    --lt-assistant-border: #a855f7;
+    --lt-assistant-text: #c4b5fd;
+    --lt-system-bg: #422006;
+    --lt-system-border: #f59e0b;
+    --lt-system-text: #fcd34d;
+    --lt-tool-bg: #14532d;
+    --lt-tool-border: #22c55e;
+    --lt-tool-text: #86efac;
+    /* Answer/reward badges (dark) */
+    --lt-answer-bg: #1e3a5f;
+    --lt-answer-text: #93c5fd;
+    --lt-reward-bg: #14532d;
+    --lt-reward-text: #86efac;
+    /* Exception styling (dark) */
+    --lt-exc-bg: #3b1515;
+    --lt-exc-border: #ef4444;
+    --lt-exc-text: #fca5a5;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: var(--lt-bg);
+    color: var(--lt-text);
+}
+
+.lt-root {
+    background: var(--lt-card);
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--lt-shadow);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Make summary appear at top (after title/subtitle) even if logged later */
+.lt-title { order: 1; }
+.lt-subtitle { order: 2; }
+.lt-summary { order: 3; }
+.lt-section, .lt-details, .lt-p, .lt-table, div:not(.lt-summary):not(.lt-subtitle) { order: 4; }
+
+.lt-title {
+    margin: 0 0 0.5rem 0;
+    color: var(--lt-accent);
+    border-bottom: 2px solid var(--lt-border);
+    padding-bottom: 0.5rem;
+}
+
+.lt-subtitle {
+    color: var(--lt-sub);
+    font-size: 0.875rem;
+    margin-bottom: 2rem;
+}
+
+/* === Theme Toggle Button === */
+.lt-theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: 1px solid var(--lt-border);
+    background: var(--lt-card);
+    color: var(--lt-text);
+    cursor: pointer;
+    font-size: 0.875rem;
+    z-index: 1000;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.lt-theme-toggle:hover {
+    background: var(--lt-bg);
+    border-color: var(--lt-accent);
+}
+
+/* === Summary Banner === */
+.lt-summary {
+    background: var(--lt-card);
+    border: 1px solid var(--lt-border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0 2rem 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.lt-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.lt-summary-label {
+    font-size: 0.75rem;
+    color: var(--lt-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.lt-summary-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--lt-text);
+}
+
+.lt-summary-bar {
+    height: 6px;
+    background: var(--lt-progress-bg);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.lt-summary-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.lt-summary-bar-fill.success { background: var(--lt-success); }
+.lt-summary-bar-fill.warning { background: var(--lt-warning); }
+.lt-summary-bar-fill.danger { background: var(--lt-danger); }
+
+.lt-section {
+    margin: 1.5rem 0;
+    padding-left: 1rem;
+    border-left: 2px solid var(--lt-border);
+}
+
+.lt-section-body {
+    margin-top: 0.5rem;
+}
+
+.lt-section h2, .lt-section h3, .lt-section h4, .lt-section h5, .lt-section h6 {
+    margin: 0.5rem 0;
+    color: var(--lt-accent);
+}
+
+.lt-p {
+    margin: 0.5rem 0;
+    white-space: pre-wrap;
+}
+
+.lt-details {
+    margin: 0.5rem 0;
+    border: 1px solid var(--lt-border);
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+
+.lt-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    user-select: none;
+}
+
+.lt-details-body {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: var(--lt-bg);
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.lt-details-body pre {
+    margin: 0;
+    font-family: var(--lt-mono);
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+}
+
+.lt-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+    font-size: 0.875rem;
+}
+
+.lt-table th {
+    background: var(--lt-accent);
+    color: white;
+    padding: 0.5rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+.lt-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--lt-border);
+}
+
+.lt-table tr:nth-child(even) {
+    background: var(--lt-bg);
+}
+
+.lt-table-caption {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--lt-text);
+}
+
+.lt-exc {
+    background: var(--lt-exc-bg);
+    border: 2px solid var(--lt-exc-border);
+    border-radius: 4px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.lt-exc summary {
+    color: var(--lt-exc-text);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.lt-exc pre {
+    margin-top: 0.5rem;
+    font-family: var(--lt-mono);
+    font-size: 0.875rem;
+    overflow-x: auto;
+}
+
+.answer, .reward {
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+    margin: 0.25rem 0;
+}
+
+.answer {
+    background: var(--lt-answer-bg);
+    color: var(--lt-answer-text);
+}
+
+.reward {
+    background: var(--lt-reward-bg);
+    color: var(--lt-reward-text);
+}
+
+</style>
+
+<script>
+(function() {
+    // Check for saved preference
+    var saved = localStorage.getItem('lt-theme');
+    if (saved === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+    } else if (saved === 'light') {
+        document.documentElement.classList.add('light-mode');
+    }
+
+    // Add toggle button after DOM ready
+    document.addEventListener('DOMContentLoaded', function() {
+        var btn = document.createElement('button');
+        btn.className = 'lt-theme-toggle';
+        btn.textContent = '\u263C / \u263E';
+        btn.title = 'Toggle light/dark theme';
+        btn.onclick = function() {
+            var html = document.documentElement;
+            if (html.classList.contains('dark-mode')) {
+                html.classList.remove('dark-mode');
+                html.classList.add('light-mode');
+                localStorage.setItem('lt-theme', 'light');
+            } else if (html.classList.contains('light-mode')) {
+                html.classList.remove('light-mode');
+                localStorage.removeItem('lt-theme');
+            } else {
+                html.classList.add('dark-mode');
+                localStorage.setItem('lt-theme', 'dark');
+            }
+        };
+        document.body.insertBefore(btn, document.body.firstChild);
+    });
+})();
+</script>
+</head>
+<body class="lt-root">
+  <h1 class="lt-title">
+Running evaluation test 0  </h1>
+  <div class="lt-subtitle">
+Generated 2025-12-08T16:53:44  </div>
+  <section class="lt-section">
+    <h2 class="lt-h2">
+do_group_rollout    </h2>
+    <div class="lt-section-body">
+      <section class="lt-section">
+        <h3 class="lt-h3">
+do_single_rollout        </h3>
+        <div class="lt-section-body"></div>
+      </section>
+    </div>
+  </section>
+  <section class="lt-section">
+    <h2 class="lt-h2">
+do_group_rollout    </h2>
+    <div class="lt-section-body">
+      <section class="lt-section">
+        <h3 class="lt-h3">
+do_single_rollout        </h3>
+        <div class="lt-section-body"></div>
+      </section>
+    </div>
+  </section>
+  <section class="lt-section">
+    <h2 class="lt-h2">
+do_group_rollout    </h2>
+    <div class="lt-section-body">
+      <section class="lt-section">
+        <h3 class="lt-h3">
+do_single_rollout        </h3>
+        <div class="lt-section-body"></div>
+      </section>
+    </div>
+  </section>
+  <section class="lt-section">
+    <h2 class="lt-h2">
+do_group_rollout    </h2>
+    <div class="lt-section-body">
+      <section class="lt-section">
+        <h3 class="lt-h3">
+do_single_rollout        </h3>
+        <div class="lt-section-body"></div>
+      </section>
+    </div>
+  </section>
+  <details class="lt-exc" open="open">
+    <summary>
+Exception: UnboundLocalError: cannot access local variable 'code_qual_score' where it is not associated with a value    </summary>
+    <pre>
+Traceback (most recent call last):
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\utils\logtree.py&quot;, line 650, in init_trace
+    yield trace
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\rl\train.py&quot;, line 69, in _get_logtree_scope
+    yield
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\rl\train.py&quot;, line 275, in run_single_evaluation
+    eval_metrics = await evaluator(sampling_client)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\rl\metric_util.py&quot;, line 136, in __call__
+    return await self.eval_token_completer(policy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\rl\metric_util.py&quot;, line 125, in eval_token_completer
+    trajectory_groups_P = await asyncio.gather(
+                          ^^^^^^^^^^^^^^^^^^^^^
+        *[run_group_rollout(builder, i) for i, builder in enumerate(self.env_group_builders_P)]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\rl\metric_util.py&quot;, line 123, in run_group_rollout
+    return await do_group_rollout(builder, policy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\utils\logtree.py&quot;, line 745, in aw
+    return await fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\rl\rollouts.py&quot;, line 42, in do_group_rollout
+    trajectories_G = await asyncio.gather(*[do_single_rollout(policy, env) for env in envs_G])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\utils\logtree.py&quot;, line 745, in aw
+    return await fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\rl\rollouts.py&quot;, line 21, in do_single_rollout
+    step_result = await env.step(ac_with_logprobs.tokens)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;C:\Users\diaso\tinker-cookbook\tinker_cookbook\recipes\code_rl\gemini_cli_code_env.py&quot;, line 199, in step
+    {&quot;label&quot;: &quot;Code Quality&quot;, &quot;value&quot;: code_qual_score, &quot;thresholds&quot;: (0.7, 0.4)},
+                                       ^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable &#x27;code_qual_score&#x27; where it is not associated with a value
+    </pre>
+  </details>
+</body>
+</html>

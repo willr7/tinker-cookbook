@@ -1,0 +1,81 @@
+### repo: C:\Users\diaso\tinker-cookbook @ a660ba9105ae2f4620010315d3b24304dfc923a9
+modules: tinker_cookbook
+-- repo-wide (vs HEAD, staged+unstaged) --
+diff --git a/tinker_cookbook/recipes/code_rl/gemini_cli_code_env.py b/tinker_cookbook/recipes/code_rl/gemini_cli_code_env.py
+index 43467d9..cdad58c 100644
+--- a/tinker_cookbook/recipes/code_rl/gemini_cli_code_env.py
++++ b/tinker_cookbook/recipes/code_rl/gemini_cli_code_env.py
+@@ -118,7 +118,7 @@ class CodeEnv_Gemini(ProblemEnv):
+         format_coef: float = 0.1,
+         reward_timeout: int = 6,
+         code_qual_every_n: int = 10,
+-        gemini_weight: float = 0.2
++        gemini_weight: float = 1.0
+     ):
+         super().__init__(renderer, convo_prefix, format_coef=format_coef)
+         self.problem = problem
+@@ -174,22 +174,23 @@ class CodeEnv_Gemini(ProblemEnv):
+ 
+         # Only compute code quality score every N steps for efficiency
+         # code_qual_score = 0.0
+-        # if extracted_code is not None and self.time_step % self.code_qual_every_n == 0:
+-        try:
+-            # grade_code_with_gemini is synchronous; run it in a thread
+-            code_qual_score = await asyncio.to_thread(
+-                grade_code_with_gemini,
+-                extracted_code,
+-                # self.get_question(),
+-            )
+-        except Exception as exc:
+-            logger.warning("Gemini code-quality grading failed: %s", exc, exc_info=True)
+-            code_qual_score = 0.0
++        if extracted_code is not None and (self.time_step == 0 or self.time_step % self.code_qual_every_n == 0):
++            try:
++                # grade_code_with_gemini is synchronous; run it in a thread
++                code_qual_score = await asyncio.to_thread(
++                    grade_code_with_gemini,
++                    extracted_code,
++                    # self.get_question(),
++                )
++            except Exception as exc:
++                logger.warning("Gemini code-quality grading failed: %s", exc, exc_info=True)
++                code_qual_score = 0.0
+         
+-    
+-
+         # Total reward includes code quality score
+-        total_reward = self.format_coef * (format_score - 1.0) + correct_score + code_qual_score * self.gemini_weight
++        if self.time_step == 0 or self.time_step % self.code_qual_every_n == 0:
++            total_reward = self.format_coef * (format_score - 1.0) + correct_score + code_qual_score * self.gemini_weight
++        else:
++            total_reward = self.format_coef * (format_score - 1.0) + correct_score
+ 
+         # Log summary at top of page (CSS ordering puts .lt-summary at top)
+         logtree.log_summary([
+@@ -223,7 +224,7 @@ class CodeEnv_Gemini(ProblemEnv):
+             logtree.log_text(f"Code Quality: {code_qual_score:.2f}")
+             logtree.log_text(f"Reward: {total_reward:.2f}", div_class="reward")
+         print(f"this is the code quality score: {code_qual_score} and this is the time step: {self.time_step}")
+-        
++
+         return StepResult(
+             reward=total_reward,
+             episode_done=True,
+@@ -248,7 +249,7 @@ class DeepcoderDataset_Gem(RLDataset):
+         format_coef: float = 0.1,
+         reward_timeout: int = 6,
+         code_qual_every_n: int = 10,
+-        gemini_weight: float = 0.2
++        gemini_weight: float = 1.0
+     ):
+         self.ds = _load_deepcoder_split(split)
+         if split == "train":
+@@ -317,7 +318,7 @@ class DeepcoderDatasetBuilder_Gem(RLDatasetBuilder):
+     format_coef: float = 0.1
+     reward_timeout: int = 6
+     code_qual_every_n: int = 10
+-    gemini_weight:float =0.2
++    gemini_weight:float =1.0
+ 
+     async def __call__(self) -> tuple[DeepcoderDataset_Gem, DeepcoderDataset_Gem]:
+         tokenizer = get_tokenizer(self.model_name_for_tokenizer)
