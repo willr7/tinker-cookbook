@@ -1,8 +1,28 @@
 import json
 import os
-import subprocess
 import textwrap
+from typing import Any, Dict
 
+import google.generativeai as genai
+
+# Configure client once at import time
+_GEMINI_CONFIGURED = False
+
+def _ensure_gemini_configured() -> None:
+    global _GEMINI_CONFIGURED
+
+    if _GEMINI_CONFIGURED:
+        return
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY environment variable is not set. "
+            "Export it before running training."
+        )
+
+    genai.configure(api_key=api_key)
+    _GEMINI_CONFIGURED = True
 
 def build_gemini_prompt(code: str, 
                         # question: str | None = None
@@ -60,37 +80,52 @@ def build_gemini_prompt(code: str,
     """)
 
 
-def call_gemini_cli(prompt: str, model: str = "gemini-2.5-flash") -> str:
+def call_gemini_cli(prompt: str, model_name: str = "gemini-2.5-flash") -> str:
     """
     Call the Gemini CLI with the given prompt and return stdout as a string.
     """
     # make sure gemini cli has deterministic score
-    cmd = [
-        "gemini",
-        "--model", model,
-        "--prompt", prompt,
-    ]
+    # cmd = [
+    #     "gemini",
+    #     "--model", model,
+    #     "--prompt", prompt,
+    # ]
 
-    # Prevent HuggingFace tokenizers fork warning
-    env = os.environ.copy()
-    env["TOKENIZERS_PARALLELISM"] = "false"
+    # # Prevent HuggingFace tokenizers fork warning
+    # env = os.environ.copy()
+    # env["TOKENIZERS_PARALLELISM"] = "false"
 
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        check=False,
-        env=env,
+    # result = subprocess.run(
+    #     cmd,
+    #     capture_output=True,
+    #     text=True,
+    #     check=False,
+    #     env=env,
+    # )
+    # if result.returncode != 0:
+    #     raise RuntimeError(
+    #         "Gemini CLI failed.\n"
+    #         f"Return code: {result.returncode}\n\n"
+    #         f"STDOUT:\n{result.stdout}\n\n"
+    #         f"STDERR:\n{result.stderr}"
+    #     )
+
+    # return result.stdout.strip()
+    _ensure_gemini_configured()
+
+    model = genai.GenerativeModel(model_name)
+    response = model.generate_content(
+        prompt,
+        generation_config=genai.types.GenerationConfig(
+            temperature=0.0,
+            # top_p=1.0,
+            # top_k=1,
+        ),
     )
-    if result.returncode != 0:
-        raise RuntimeError(
-            "Gemini CLI failed.\n"
-            f"Return code: {result.returncode}\n\n"
-            f"STDOUT:\n{result.stdout}\n\n"
-            f"STDERR:\n{result.stderr}"
-        )
 
-    return result.stdout.strip()
+    # The SDK usually puts the text in response.text
+    return (response.text or "").strip()
+
 
 def grade_code_with_gemini(
     code: str,
@@ -104,7 +139,7 @@ def grade_code_with_gemini(
 
     prompt = build_gemini_prompt(code) 
                                 #  ,question=question)
-    raw = call_gemini_cli(prompt, model=model)
+    raw = call_gemini_cli(prompt, model_name=model)
 
     try:
         data = json.loads(raw)

@@ -37,7 +37,7 @@ class CLIConfig:
 
     # hopefully speeds up training
     code_qual_every_n: int = 10        # only call Gemini every n episodes
-    gemini_weight: float=0.2
+    gemini_weight: float=1.0
 
     # Logging / eval / checkpoints
     log_dir: str | None = None

@@ -173,18 +173,20 @@ class CodeEnv_Gemini(ProblemEnv):
         correct_score = float(correct_answer_bool)
 
         # Only compute code quality score every N steps for efficiency
-        code_qual_score = 0.0
-        if extracted_code is not None and self.time_step % self.code_qual_every_n == 0:
-            try:
-                # grade_code_with_gemini is synchronous; run it in a thread
-                code_qual_score = await asyncio.to_thread(
-                    grade_code_with_gemini,
-                    extracted_code,
-                    # self.get_question(),
-                )
-            except Exception as exc:
-                logger.warning("Gemini code-quality grading failed: %s", exc, exc_info=True)
-                code_qual_score = 0.0
+        # code_qual_score = 0.0
+        # if extracted_code is not None and self.time_step % self.code_qual_every_n == 0:
+        try:
+            # grade_code_with_gemini is synchronous; run it in a thread
+            code_qual_score = await asyncio.to_thread(
+                grade_code_with_gemini,
+                extracted_code,
+                # self.get_question(),
+            )
+        except Exception as exc:
+            logger.warning("Gemini code-quality grading failed: %s", exc, exc_info=True)
+            code_qual_score = 0.0
+        
+    
 
         # Total reward includes code quality score
         total_reward = self.format_coef * (format_score - 1.0) + correct_score + code_qual_score * self.gemini_weight
@@ -220,7 +222,8 @@ class CodeEnv_Gemini(ProblemEnv):
             logtree.log_text(f"Correct: {status_icon} {'All tests passed' if correct_answer_bool else 'Tests failed'}")
             logtree.log_text(f"Code Quality: {code_qual_score:.2f}")
             logtree.log_text(f"Reward: {total_reward:.2f}", div_class="reward")
-
+        print(f"this is the code quality score: {code_qual_score} and this is the time step: {self.time_step}")
+        
         return StepResult(
             reward=total_reward,
             episode_done=True,
