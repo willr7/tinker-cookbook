@@ -164,7 +164,6 @@ class CodeEnv_Gemini(ProblemEnv):
 
     async def step(self, action: Action) -> StepResult:
         
-
         message, parse_success = self.renderer.parse_response(action)
         content = message["content"]
         format_ok_bool = bool(parse_success) and self.check_format(content)
@@ -224,9 +223,9 @@ class CodeEnv_Gemini(ProblemEnv):
             logtree.log_text(f"Correct: {status_icon} {'All tests passed' if correct_answer_bool else 'Tests failed'}")
             logtree.log_text(f"Code Quality: {code_qual_score:.2f}")
             logtree.log_text(f"Reward: {total_reward:.2f}", div_class="reward")
-            
-        if self.time_step == 0 or self.time_step % self.code_qual_every_n == 0:
-            print(f"this is the code quality score: {code_qual_score} and this is the time step: {self.time_step}")
+
+        # if self.time_step == 0 or self.time_step % self.code_qual_every_n == 0:
+        #     print(f"this is the code quality score: {code_qual_score} and this is the time step: {self.time_step}")
         self.time_step += 1
 
         return StepResult(
